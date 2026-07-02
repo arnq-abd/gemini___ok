@@ -1,0 +1,45 @@
+(async function autoDeleteRecents() {
+  const delay = (ms) => new Promise(res => setTimeout(res, ms));
+  function findByText(elements, text) {
+    return Array.from(elements).find(el =>
+      el.textContent.trim().toLowerCase() === text.toLowerCase() ||
+      el.textContent.trim().toLowerCase().includes(text.toLowerCase())
+    );
+  }
+  let count = 0;
+  let failCount = 0;
+  while (failCount < 3) {
+    // Find the first button with aria-label "More options for ..."
+    const moreBtn = document.querySelector('button[aria-label^="More options for"]');
+    if (!moreBtn) {
+      console.log("✅ No more Recent chats left. Stopping. Total deleted:", count);
+      break;
+    }
+    const chatName = moreBtn.getAttribute('aria-label').replace('More options for ', '');
+    console.log(`👉 Trying to delete: "${chatName.slice(0, 50)}..."`);
+    moreBtn.click();
+    await delay(400);
+    // Click the Delete button from the menu
+    const deleteBtn = document.querySelector('button[data-test-id="delete-button"]');
+    if (!deleteBtn) {
+      console.error("❌ Delete button not found in menu. Retrying...");
+      document.body.click(); // Close the menu
+      failCount++;
+      await delay(500);
+      continue;
+    }
+    deleteBtn.click();
+    await delay(500);
+    // If a confirmation dialog appears, confirm it
+    const confirmBtn = findByText(document.querySelectorAll('button'), "delete");
+    if (confirmBtn) {
+      confirmBtn.click();
+      await delay(700);
+    }
+    count++;
+    failCount = 0;
+    console.log(`🗑️ Deleted #${count}: "${chatName.slice(0, 50)}..."`);
+    await delay(900); // Small pause before the next chat
+  }
+  console.log(`🎉 Done! Total ${count} chat(s) deleted.`);
+})();
