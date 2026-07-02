@@ -1,0 +1,57 @@
+(async function autoDeleteRecents() {
+  const delay = (ms) => new Promise(res => setTimeout(res, ms));
+
+  function findByText(elements, text) {
+    return Array.from(elements).find(el =>
+      el.textContent.trim().toLowerCase() === text.toLowerCase() ||
+      el.textContent.trim().toLowerCase().includes(text.toLowerCase())
+    );
+  }
+
+  let count = 0;
+  let failCount = 0;
+
+  while (failCount < 3) {
+    // "More options for ..." aria-label যুক্ত প্রথম বাটন খোঁজা
+    const moreBtn = document.querySelector('button[aria-label^="More options for"]');
+
+    if (!moreBtn) {
+      console.log("✅ আর কোনো Recent চ্যাট নেই। থামলাম। মোট ডিলিট হয়েছে:", count);
+      break;
+    }
+
+    const chatName = moreBtn.getAttribute('aria-label').replace('More options for ', '');
+    console.log(`👉 ডিলিট করার চেষ্টা করছি: "${chatName.slice(0, 50)}..."`);
+
+    moreBtn.click();
+    await delay(400);
+
+    // মেনু থেকে Delete বাটনে ক্লিক করা
+    const deleteBtn = document.querySelector('button[data-test-id="delete-button"]');
+    if (!deleteBtn) {
+      console.error("❌ Delete বাটন মেনুতে খুঁজে পাইনি। আবার চেষ্টা করছি...");
+      document.body.click(); // মেনু বন্ধ করা
+      failCount++;
+      await delay(500);
+      continue;
+    }
+
+    deleteBtn.click();
+    await delay(500);
+
+    // কনফার্মেশন ডায়ালগ থাকলে সেটা কনফার্ম করা
+    const confirmBtn = findByText(document.querySelectorAll('button'), "delete");
+    if (confirmBtn) {
+      confirmBtn.click();
+      await delay(700);
+    }
+
+    count++;
+    failCount = 0;
+    console.log(`🗑️ ডিলিট হয়েছে #${count}: "${chatName.slice(0, 50)}..."`);
+
+    await delay(900); // পরের চ্যাটের আগে একটু বিরতি
+  }
+
+  console.log(`🎉 সম্পন্ন! মোট ${count} টা চ্যাট ডিলিট হয়েছে।`);
+})();
